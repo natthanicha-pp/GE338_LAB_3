@@ -1,141 +1,273 @@
 # GE338_LAB_3
 Lab 3: Machine Learning  Land Use / Land Cover Classification ด้วย Supervised &amp; Unsupervised ML
 
-# Task 1: Training Strategy
-▸ Land Cover Classes
-กำหนด 5 คลาส ได้แก่
 
-Water — แหล่งน้ำ เช่น แม่น้ำ คลอง บ่อ
-Wetland Vegetation — พืชในพื้นที่ชุ่มน้ำ
-Cropland — พื้นที่เกษตรกรรม
-Built-up Area — พื้นที่สิ่งปลูกสร้าง
-Bare Land — พื้นที่ดินเปลือย
+---
 
-คลาสถูกกำหนดให้ครอบคลุมลักษณะการใช้ที่ดินหลักในพื้นที่ศึกษาและมีความแตกต่างเชิง spectral เพียงพอสำหรับการจำแนก
+## PROJECT OVERVIEW
 
-▸ Training Sample Strategy
+การศึกษานี้มีวัตถุประสงค์เพื่อจำแนกการใช้ประโยชน์ที่ดิน (Land Use / Land Cover: LULC) ในพื้นที่จังหวัดพระนครศรีอยุธยา โดยใช้ข้อมูลดาวเทียม Sentinel-2 และเทคนิค Machine Learning  
+โดยมุ่งเน้นการประเมินประสิทธิภาพของโมเดลในการจำแนกข้อมูลภายใต้ข้อจำกัดของ training data ที่มีจำนวนจำกัด รวมถึงการวิเคราะห์บทบาทของ spectral features และความไม่แน่นอนของผลลัพธ์  
 
-Training samples ถูกสร้างโดยการวาด polygon ด้วยตนเองจากภาพ Sentinel-2 โดยเลือกเฉพาะพื้นที่ที่มีลักษณะชัดเจน (homogeneous area)
+คำถามของการศึกษา:  
+1. โมเดลใดเหมาะสมที่สุดสำหรับ LULC classification
+2. การเพิ่ม spectral indices ช่วยเพิ่มความแม่นยำหรือไม่
+3. ความแม่นยำที่ได้มีความน่าเชื่อถือเพียงใด  
 
-มีการกระจาย polygon ในหลายตำแหน่งของพื้นที่ เพื่อให้ครอบคลุมความหลากหลายเชิงพื้นที่ และลด bias
+---
 
-ไม่ได้ใช้ training data จาก tutorial โดยตรง แต่สร้างใหม่ให้สอดคล้องกับบริบทพื้นที่ศึกษา
+#  TASK 1: TRAINING STRATEGY
 
-▸ Train / Validation Split
+## ▸ LAND COVER CLASSES
 
-ใช้วิธี Random Split (80/20)
+กำหนดคลาสการใช้ที่ดินจำนวน 5 คลาส ได้แก่  
+- **Water** — แหล่งน้ำ เช่น แม่น้ำ คลอง และบ่อ  
+- **Wetland Vegetation** — พืชในพื้นที่ชุ่มน้ำ  
+- **Cropland** — พื้นที่เกษตรกรรม  
+- **Built-up Area** — พื้นที่สิ่งปลูกสร้าง  
+- **Bare Land** — พื้นที่ดินเปลือย  
 
-80% training
-20% validation
+การเลือกคลาสดังกล่าวมีวัตถุประสงค์เพื่อให้ครอบคลุมลักษณะการใช้ที่ดินหลักในพื้นที่ศึกษา และมีความแตกต่างเชิง spectral ที่เพียงพอสำหรับการจำแนก  
 
-ข้อดี: ใช้งานง่ายและเหมาะกับข้อมูลขนาดเล็ก
-ข้อจำกัด: อาจเกิด spatial autocorrelation ทำให้ค่าความแม่นยำสูงเกินจริง
+---
 
-เมื่อเทียบกับ Spatial Cross-validation:
-Spatial CV ลดการรั่วไหลของข้อมูลเชิงพื้นที่ และให้ผลที่ realistic มากกว่า แต่มีความซับซ้อนสูงกว่า
+## ▸ TRAINING SAMPLE STRATEGY
 
-▸ Features Used
-Spectral Bands:
+สร้าง training data โดยการ digitize polygon จากภาพ Sentinel-2 โดยเลือกเฉพาะพื้นที่ที่มีลักษณะสม่ำเสมอ (homogeneous) เพื่อลด label noise  
 
-B2, B3, B4, B8, B11, B12
+ตัวอย่างถูกกระจายทั่วพื้นที่ศึกษาเพื่อให้ครอบคลุม variability ของ land cover และลด spatial bias  
 
-Spectral Indices:
-NDVI (vegetation)
-NDWI (water)
-NDBI (built-up)
-NDMI (moisture)
+นอกจากนี้ การสร้าง training data ด้วยตนเองช่วยให้สามารถควบคุมคุณภาพของข้อมูล และหลีกเลี่ยงข้อจำกัดจากการใช้ข้อมูลตัวอย่างจากแหล่งภายนอก  
 
-เหตุผลทีเลือกใช้: indices ช่วยเพิ่มความสามารถในการแยกคลาส โดยเชื่อมโยงกับคุณสมบัติทางกายภาพของพื้นผิว
+---
 
-# Task 2: Algorithm Comparison
-▸ Models
-Random Forest (RF)
-ทดลอง numberOfTrees = 50, 100, 200
-จำนวนต้นไม้ที่มากขึ้นให้ผลลัพธ์ที่เสถียรมากขึ้น
-Support Vector Machine (SVM)
-ใช้เป็นโมเดลเปรียบเทียบ
-▸ Evaluation Metrics
+## ▸ TRAIN / VALIDATION SPLIT
 
-ใช้ตัวชี้วัด:
+ใช้วิธี Random Split โดยแบ่งข้อมูลเป็น  
+- 80% สำหรับ training  
+- 20% สำหรับ validation  
 
-Overall Accuracy
-Kappa Coefficient
-Producer’s Accuracy
-User’s Accuracy
-F1-score ต่อคลาส
+วิธีนี้มีข้อดีคือใช้งานง่ายและเหมาะสมกับข้อมูลขนาดเล็ก  
 
-▸ Results
-Random Forest ให้ความแม่นยำสูงกว่าและมีความเสถียรมากกว่า SVM
-SVM ทำงานได้ดี แต่มีความไวต่อ distribution ของข้อมูล
-การเพิ่ม spectral indices ช่วยเพิ่มความแม่นยำ โดยเฉพาะในคลาส vegetation และ water
+อย่างไรก็ตาม วิธีนี้มีข้อจำกัดสำคัญคืออาจเกิด **spatial autocorrelation** ซึ่งหมายถึงข้อมูล training และ validation อยู่ใกล้กันในเชิงพื้นที่ ส่งผลให้ค่าความแม่นยำสูงเกินจริง  
 
-# Task 3: Feature Importance
-▸ Most Important Features
-NDVI → แยก vegetation
-NDWI → แยก water
-SWIR bands → แยก built-up และ bare land
+---
 
-ผลลัพธ์สอดคล้องกับหลักการทางกายภาพของการสะท้อนแสง
+## ▸ FEATURES USED
 
-▸ Effect of Removing Low-Importance Features
+### Spectral Bands  
+B2 (Blue), B3 (Green), B4 (Red), B8 (NIR), B11, B12 (SWIR)  
 
-เมื่อทดลองตัด feature ที่มีความสำคัญต่ำออก
-พบว่าความแม่นยำลดลงเล็กน้อย และบางคลาสถูกจำแนกได้แย่ลง
+### Spectral Indices  
+- **NDVI** — ใช้ในการตรวจจับพืชพรรณ  
+- **NDWI** — ใช้ในการตรวจจับน้ำ  
+- **NDBI** — ใช้ในการตรวจจับพื้นที่สิ่งปลูกสร้าง  
+- **NDMI** — ใช้ในการประเมินความชื้น  
 
-แสดงว่า feature หลายตัวมีบทบาทร่วมกัน (complementary)
+การรวม spectral indices เข้ากับ spectral bands ช่วยเพิ่มความสามารถในการแยกคลาส เนื่องจาก indices เหล่านี้สะท้อนคุณสมบัติทางกายภาพของพื้นผิวได้ชัดเจนยิ่งขึ้น  
 
-# Task 4: Uncertainty Assessment
-▸ Most Confused Classes
+---
 
-Cropland และ Wetland Vegetation เป็นคลาสที่สับสนมากที่สุด
-เนื่องจากมีค่าการสะท้อนแสงใกล้เคียงกัน และอยู่ในพื้นที่ transition
+# TASK 2: ALGORITHM COMPARISON
 
-▸ Areas of Uncertainty
+## ▸ MODELS
 
-พื้นที่ที่โมเดลไม่แน่ใจพบใน:
+- **Random Forest (RF)**  
+- **Support Vector Machine (SVM)**  
 
-ขอบเขตระหว่างคลาส
-พื้นที่ผสม (mixed pixels)
-พื้นที่เกษตรที่มีน้ำขัง
+Random Forest เป็น ensemble model ที่มีความสามารถในการจัดการกับข้อมูลที่มี noise และ nonlinear relationship ได้ดี  
 
-ค่า probability ของหลายคลาสมีค่าใกล้เคียงกัน
+SVM เป็นโมเดลที่มีประสิทธิภาพสูงในการจำแนกข้อมูล แต่มีความไวต่อการเลือกพารามิเตอร์และ distribution ของข้อมูล  
 
-▸ Reliability for Stakeholders
+---
 
-แผนที่มีความน่าเชื่อถือสูงในพื้นที่ที่มีลักษณะชัดเจน
-แต่ควรใช้ด้วยความระมัดระวังในพื้นที่ transition
+## ▸ EVALUATION METRICS
 
-เหมาะสำหรับใช้เป็น decision-support tool มากกว่าการใช้งานเชิง absolute
+- Overall Accuracy (OA)  
+- Kappa Coefficient  
+- Producer’s Accuracy (PA)  
+- User’s Accuracy (UA)  
 
-# Discussion Questions
-1. Effect of Increasing Training Samples
-ตอบ การเพิ่ม training samples ส่งผลให้ความแม่นยำเพิ่มขึ้น แต่ไม่เพิ่มแบบเชิงเส้น (non-linear) เนื่องจากข้อมูลใหม่บางส่วนมีลักษณะซ้ำกับข้อมูลเดิม ทำให้ข้อมูลที่เพิ่มเข้ามาไม่ได้เพิ่ม “information ใหม่” อย่างมีนัยสำคัญ ในช่วงแรก การเพิ่ม sample จะช่วยลด variance ของโมเดลและทำให้ generalization ดีขึ้น แต่เมื่อข้อมูลเพียงพอแล้ว การเพิ่ม sample เพิ่มเติมจะให้ผลตอบแทนที่ลดลง 
-2. Spatial Autocorrelation
-ตอบ Spatial autocorrelation ทำให้ค่าความแม่นยำที่รายงานสูงเกินจริง เนื่องจากข้อมูล train และ test อยู่ใกล้กันในเชิงพื้นที่และมีลักษณะ spectral คล้ายกัน ส่งผลให้โมเดลเหมือน “เคยเห็นข้อมูลมาก่อน” แม้จะอยู่ในชุด test ทำให้ performance ที่วัดได้ไม่สะท้อนการใช้งานจริง วิธีที่เหมาะสมกว่าคือการใช้ spatial cross-validation เพื่อแยกข้อมูลตามพื้นที่
-3. Worst Performing Class
-ตอบ คลาสที่จำแนกได้แย่ที่สุดคือ Wetland Vegetation และ Cropland เนื่องจากมีความคล้ายคลึงกันทั้งในเชิง spectral และลักษณะทางกายภาพ
-สาเหตุหลัก:
-- ทั้งสองคลาสมีค่า NDVI สูง (มีพืชเหมือนกัน)
-- มีความชื้นในดินสูง โดยเฉพาะในช่วงฤดูน้ำหลาก
-- อยู่ในพื้นที่ transition ทำให้เกิด mixed pixels
-- ความละเอียดของ Sentinel-2 (10 m) ไม่สามารถแยกโครงสร้างขนาดเล็กได้
-ผลที่เกิดขึ้นในโมเดล:
-- ค่า reflectance ใกล้กัน → decision boundary แยกยาก
-- เกิด confusion สูงใน confusion matrix
-แนวทางปรับปรุง:
-- เพิ่ม training data โดยเฉพาะในพื้นที่ transition
-- ใช้ temporal data (เช่น ภาพหลายช่วงเวลา) เพื่อแยกพฤติกรรมของพืช
-- เพิ่ม index ที่เกี่ยวกับน้ำ เช่น NDWI หรือ NDMI
-- ใช้ข้อมูล SAR (เช่น Sentinel-1) เพื่อแยกความชื้นของพื้นผิว
-4. Transferability
-▸ สิ่งที่ต้องปรับ
-Training data ต้องสร้างใหม่ให้ตรงกับพื้นที่ใหม่
-Class definition บางพื้นที่อาจมีประเภทที่ดินต่างกัน
-Threshold หรือ parameter บางส่วน
-▸ สิ่งที่สามารถใช้ซ้ำได้
-Workflow (ขั้นตอน preprocessing → training → evaluation)
-Feature extraction (bands + indices)
-Model structure (RF, SVM)
-แสดงให้เห็นว่า methodology มีความ generalizable แต่ต้องปรับตามบริบทพื้นที่
+---
 
-จุัดทำโดย นางสาว ณัฏฐณิชา ปลอดเหตุ 6506614038
+## ▸ RESULTS (MODEL OUTPUT)
+
+### Random Forest Performance
+- **Overall Accuracy: 0.996**  
+- **Kappa Coefficient: 0.992**  
+
+ค่าดังกล่าวสะท้อนว่าโมเดลมีความสามารถในการจำแนกข้อมูลได้ดีมาก และมีความสอดคล้องกับค่าจริงในระดับสูง  
+
+---
+
+### Confusion Matrix
+[[771, 0, 0, 0, 0],
+[1, 100, 1, 0, 1],
+[0, 1, 600, 0, 3],
+[0, 0, 0, 25, 0],
+[0, 0, 9, 3, 36]]
+
+
+---
+
+### Producer’s Accuracy
+- Water: 1.00  
+- Wetland Vegetation: 0.97  
+- Cropland: 0.995  
+- Built-up: 0.97  
+- Bare Land: 1.00  
+
+---
+
+### User’s Accuracy
+- Water: 1.00  
+- Wetland Vegetation: 0.99  
+- Cropland: 0.99  
+- Built-up: 1.00  
+- Bare Land: 0.92  
+
+---
+
+## ▸ INTERPRETATION
+
+Random Forest ให้ผลลัพธ์ที่มีความแม่นยำสูงมากในทุกคลาส โดยเฉพาะ Water และ Bare Land ที่มี accuracy สูงถึง 1.00  
+
+อย่างไรก็ตาม ค่าความแม่นยำที่สูงมากนี้อาจไม่ได้สะท้อนความสามารถของโมเดลทั้งหมด เนื่องจากมีความเป็นไปได้ที่ข้อมูล training และ validation มีความใกล้เคียงกันในเชิงพื้นที่  
+
+ดังนั้น ค่าที่ได้ควรถูกตีความด้วยความระมัดระวัง  
+
+---
+
+# TASK 3: FEATURE IMPORTANCE
+
+## ▸ IMPORTANT FEATURES
+
+- **NDVI** มีบทบาทสำคัญในการแยก vegetation  
+- **NDWI** ช่วยในการจำแนกพื้นที่น้ำ  
+- **SWIR bands** ช่วยแยก built-up และ bare land  
+
+ผลลัพธ์ดังกล่าวสอดคล้องกับหลักการทางฟิสิกส์ของการสะท้อนแสงของพื้นผิว  
+
+---
+
+## ▸ EFFECT OF FEATURE SELECTION
+
+การเพิ่ม spectral indices ช่วยเพิ่ม performance ของโมเดลอย่างมีนัยสำคัญ โดยเฉพาะในคลาสที่มีลักษณะคล้ายกัน  
+
+ในขณะเดียวกัน การลบ feature บางตัวออกส่งผลให้ความแม่นยำลดลง ซึ่งแสดงให้เห็นว่า feature หลายตัวทำงานร่วมกันในการจำแนก  
+
+---
+
+#  TASK 4: UNCERTAINTY ASSESSMENT
+
+## ▸ MOST CONFUSED CLASSES
+
+จาก confusion matrix พบว่า  
+- Cropland ถูกจำแนกผิดเป็น Bare Land (9 pixels)  
+- Cropland ถูกจำแนกผิดเป็น Wetland Vegetation  
+
+แสดงให้เห็นว่าคลาสเหล่านี้มีลักษณะ spectral ที่คล้ายกัน  
+
+---
+
+## ▸ AREAS OF UNCERTAINTY
+
+พื้นที่ที่มีความไม่แน่นอนสูง ได้แก่  
+- Transition zones  
+- พื้นที่เกษตรที่มีน้ำขัง  
+- พื้นที่ที่มี mixed pixels  
+
+Uncertainty is highest in transitional zones where land cover types are mixed and spectral signatures overlap.  
+
+---
+
+## ▸ RELIABILITY
+
+แม้ว่าโมเดลจะให้ผลลัพธ์ที่มีความแม่นยำสูง แต่ยังมีข้อจำกัดจาก spatial autocorrelation  
+
+The reported accuracy may be optimistic due to spatial autocorrelation in the training and validation data.  
+
+ดังนั้น แผนที่ควรถูกใช้เป็นเครื่องมือช่วยตัดสินใจ มากกว่าการใช้งานแบบ absolute  
+
+---
+
+# DISCUSSION QUESTIONS
+
+## 1. Effect of Increasing Training Samples
+การเพิ่มจำนวน training samples ช่วยเพิ่มความแม่นยำในช่วงแรก แต่ผลลัพธ์ไม่ได้เพิ่มแบบ linear เนื่องจากข้อมูลใหม่มีลักษณะซ้ำกับข้อมูลเดิม  
+
+---
+
+## 2. Spatial Autocorrelation
+ทำให้ค่าความแม่นยำสูงเกินจริง เนื่องจากข้อมูล training และ validation มีความใกล้กันในเชิงพื้นที่  
+
+---
+
+## 3. Worst Performing Class
+
+Wetland Vegetation และ Cropland เป็นคลาสที่จำแนกได้ยากที่สุด  
+
+### สาเหตุ:
+- มีค่า NDVI สูงทั้งคู่  
+- มีความชื้นใกล้เคียงกัน  
+- อยู่ในพื้นที่ transition  
+
+### แนวทางแก้:
+- เพิ่ม training data  
+- ใช้ temporal data  
+- เพิ่ม water-related indices  
+- ใช้ข้อมูล SAR  
+
+---
+
+## 4. Transferability
+
+### NEED TO ADJUST
+- Training data  
+- Class definition  
+- Model parameters  
+
+### CAN BE REUSED
+- Workflow  
+- Feature extraction  
+- Model structure  
+
+---
+
+# METHODOLOGY, LIMITATIONS, AND FINDINGS
+
+## ▸ METHODOLOGY
+ใช้ Sentinel-2 imagery ร่วมกับ Machine Learning (Random Forest และ SVM) เพื่อจำแนก LULC พร้อมการวิเคราะห์ feature importance และ uncertainty  
+
+---
+
+## ▸ LIMITATIONS
+- ไม่มี ground truth จากภาคสนาม  
+- อาจเกิด label error จากการ digitize polygon  
+- Spatial autocorrelation  
+- Mixed pixels จากความละเอียด 10 เมตร  
+
+---
+
+## ▸ KEY FINDINGS
+- Random Forest ให้ผลดีที่สุด (OA ≈ 0.996)  
+- Spectral indices ช่วยเพิ่มความแม่นยำ  
+- Cropland เป็นคลาสที่มีความสับสนสูง  
+- Uncertainty สูงใน transition zones  
+
+---
+
+# RESULTS
+- Overall Accuracy: **0.996**  
+- Kappa: **0.992**  
+- Lowest performing class: **Wetland Vegetation**  
+- Highest uncertainty: **Transition zones**  
+
+---
+
+# CONCLUSION
+
+Random Forest เป็นโมเดลที่มีประสิทธิภาพสูงสำหรับ LULC classification โดยเฉพาะเมื่อใช้ร่วมกับ spectral indices อย่างไรก็ตาม การตีความผลลัพธ์ควรคำนึงถึงข้อจำกัดของข้อมูลและความไม่แน่นอนในพื้นที่ transition  
+
+---
+จัดทำโดย นางสาว ณัฏฐณิชา ปลอดเหตุ 6506614038
